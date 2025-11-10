@@ -1,0 +1,15 @@
+/.dfx/
+/target/
+/canisters/**/target/
+node_modules/
+dist/
+.canister_ids
+.DS_Store
+.env
+.env.*
+.vscode/
+*.log
+# optional build cache
+/.parcel-cache/
+/.next/
+/out/

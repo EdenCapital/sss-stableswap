@@ -1,0 +1,158 @@
+type AmountE6 = nat;
+type Account = record { owner: principal; subaccount: opt vec nat8 };
+type TokenId = variant { USDC; USDT; ICP; BOB };
+type TxResult = variant { ok: nat; err: text };
+type PoolReserves = record { usdc : nat; usdt : nat };
+
+
+
+type PoolInfo = record {
+  a_amp: nat32;
+  fee_bps: nat16;
+  reserve_usdc: AmountE6;
+  reserve_usdt: AmountE6;
+  total_shares: AmountE6;
+  virtual_price_e6: nat;
+};
+
+type QuoteOut = record { dy_e6: AmountE6; fee_e6: AmountE6; price_e6: nat };
+type TextResult = variant { ok : text; err : text };
+
+
+type SwapArgs = record {
+  account: Account;
+  token_in: TokenId;
+  token_out: TokenId;
+  dx_e6: AmountE6;
+  min_dy_e6: AmountE6;
+};
+
+type Event = variant {
+  Swap: record { who: text; dx_e6: AmountE6; dy_e6: AmountE6; ts: nat64 };
+  AddLiq: record { who: text; usdc: AmountE6; usdt: AmountE6; shares: AmountE6; ts: nat64 };
+  RemoveLiq: record { who: text; shares: AmountE6; usdc: AmountE6; usdt: AmountE6; ts: nat64 };
+  Deposit: record { who: text; token: TokenId; amount: AmountE6; ts: nat64 };
+  Withdraw: record { who: text; token: TokenId; amount: AmountE6; ts: nat64 };
+};
+
+type SubBalance = record {
+  id: text;
+  usdc: AmountE6;
+  usdt: AmountE6;
+  bob: AmountE6;
+  icp: AmountE6;
+};
+type Position = record { shares: AmountE6 };
+
+/* ===== 统计 / 风控 / Cycles ===== */
+type HourBucket = record {
+  ts_hour: nat64;       // 小时整点（秒 / 3600）
+  volume_e6: nat;       // (dx+dy)/2
+  fee_e6: nat;          // 输入侧手续费
+  swaps: nat32;
+};
+
+type StatsSnapshot = record {
+  now_sec: nat64;
+  tvl_e6: nat;
+  vol_24h_e6: nat;
+  vol_7d_e6: nat;
+  fee_24h_e6: nat;
+  fee_7d_e6: nat;
+  swaps_24h: nat32;
+  apy_24h_bp: nat32;    // bps
+};
+
+type RiskParams = record {
+  max_price_impact_bps: nat32;
+  d_tolerance_e6: nat64;
+};
+
+type CyclesInfo = record {
+  balance: nat;
+  alert_threshold: nat;
+  low: bool;
+};
+
+type DepositTarget = record { owner: principal; sub: vec nat8; ai_hex: text };
+
+
+type Available = record { usdc : nat; usdt : nat };
+type TwoAmounts = record { usdc : nat; usdt : nat };
+
+type TokenMeta = record {
+  ckusdc: principal;
+  ckusdt: principal;
+  dec_usdc: nat8;
+  dec_usdt: nat8;
+};
+
+
+service : {
+  // Explore
+  get_pool_info : () -> (PoolInfo) query;
+
+  // Swap
+  quote : (TokenId, TokenId, AmountE6) -> (QuoteOut) query;
+  swap  : (SwapArgs) -> (variant { ok: record { dy_e6: AmountE6 }; err: text });
+
+  // Positions
+  add_liquidity    : (Account, AmountE6, AmountE6)
+        -> (variant { ok: record { shares: AmountE6 }; err: text });
+  remove_liquidity : (Account, AmountE6)
+        -> (variant { ok: record { usdc: AmountE6; usdt: AmountE6 }; err: text });
+  get_user_position : (Account) -> (Position) query;
+  get_unclaimed_fee : (Account) -> (record { usdc: AmountE6; usdt: AmountE6 }) query;
+  claim_fee         : (Account) -> (variant { ok : record { usdc: AmountE6; usdt: AmountE6 }; err: text });
+
+  // Assets（主/子账户 + 演示划转）
+  get_user_balances     : (Account) -> (record { usdc: AmountE6; usdt: AmountE6; bob: AmountE6; icp: AmountE6 }) query;
+  get_user_sub_balances : (Account) -> (vec SubBalance) query;
+
+  // Activity
+  get_events        : (nat, nat) -> (vec Event) query;
+  get_events_latest : (nat) -> (vec Event) query;
+
+  // ===== 权威统计 / 风控 / Cycles =====
+  get_tvl_e6        : () -> (nat) query;
+  get_stats_snapshot: () -> (StatsSnapshot) query;
+  get_stats_series  : (nat32) -> (vec HourBucket) query;
+  get_risk_params   : () -> (RiskParams) query;
+  get_cycles_info   : () -> (CyclesInfo) query;
+
+  // ===== ICRC 辅助：canister principal / 用户子账户 =====
+  get_canister_principal : () -> (principal) query;
+  get_my_subaccount      : () -> (vec nat8) query;  
+  withdraw_from_sub : (text, Account, nat) -> (variant { ok: text; err: text });
+  get_my_icp_account_id_hex : () -> (text) query;
+  get_my_deposit_target   : () -> (DepositTarget) query;
+  ensure_allowance_for_user: (principal, nat) -> (bool);
+  get_available_balances : (Account) -> (Available) query;  
+
+  set_token_meta : (TokenMeta) -> ();
+  get_token_meta : () -> (opt TokenMeta) query;
+
+
+
+  /// 计算“指定用户 principal”的存款目标（owner=本 canister、sub=该用户派生子账户、ai_hex=ICP AccountIdentifier 16进制）
+  get_deposit_target_for : (principal) -> (DepositTarget) query;
+
+
+
+  get_my_available_balances_live : () -> (Available) query;
+  get_available_balances_live_for : (principal) -> (Available) query;
+  refresh_available_for           : (principal) -> (variant { ok : text; err : text });
+  get_pool_account: (text) -> (Account) query;
+  transfer_from_user_sub_to_pool: (text, principal, nat) -> (variant { ok : nat; err : text });
+  transfer_from_pool_to_user_sub: (text, principal, nat) -> (variant { ok : nat; err : text });
+  get_pool_reserves_live : () -> (PoolReserves) query;
+  admin_reconcile_pool_from_live : () -> (TextResult);
+  admin_reconcile_from_internal  : () -> (TextResult);
+  quote_live : (TokenId, TokenId, AmountE6) -> (QuoteOut) query;
+  swap_live  : (SwapArgs) -> (variant { ok: record { dy_e6: AmountE6 }; err: text });
+  quote_exact_out       : (TokenId, TokenId, AmountE6) -> (QuoteOut) query;
+  quote_live_exact_out  : (TokenId, TokenId, AmountE6) -> (QuoteOut) query;
+  
+
+  __get_candid_interface_tmp_hack : () -> (text) query;
+}

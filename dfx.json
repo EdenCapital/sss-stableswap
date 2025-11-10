@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "dfx": "0.29.2",
+  "canisters": {
+    "vaultpair": {
+      "type": "custom",
+      "candid": "canisters/vaultpair/src/vaultpair.did",
+      "build": "cargo build --manifest-path canisters/vaultpair/Cargo.toml --release --target wasm32-unknown-unknown",
+      "wasm": "canisters/vaultpair/target/wasm32-unknown-unknown/release/vaultpair.wasm",
+      "metadata": [{ "name": "candid:service" }]
+    },
+    "www": {
+      "type": "assets",
+      "source": ["canisters/www/dist"],
+      "build": "npm --prefix canisters/www install && dfx generate vaultpair && node scripts/copy-did.mjs && bash scripts/write-env.sh && npm --prefix canisters/www run build"
+    }
+  }
+}
