@@ -31,6 +31,7 @@
 ```bash
 npm --prefix canisters/www install
 dfx start --clean --background
+dfx generate vaultpair
 dfx deploy
 
 
