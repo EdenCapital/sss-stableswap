@@ -3,11 +3,10 @@
 **Secure · Simple · Swift** — a Curve-v1–based stablecoin AMM on the Internet Computer delivering a **single-update** swap path with a target of **~2s completion** and **~0.5s perceived latency** (M2). The MVP validates the full on-chain flow (deposit → approve → swap → LP) with ~30s end-to-end, then transitions to **internal accounting** for speed while keeping safety and observability.
 
 ## Live
-- Frontend (mainnet): <REPLACE_WITH_YOUR_FRONTEND_URL>
-- Core canister (vaultpair): <REPLACE_WITH_YOUR_CANISTER_ID>
-- Forum post: <REPLACE_WITH_FORUM_LINK>
-- Demo video (≤2 min): <REPLACE_WITH_VIDEO_LINK>
-- One-pager (PDF): <REPLACE_WITH_PDF_LINK>
+- Frontend (mainnet): https://m5mwu-5iaaa-aaaai-q34sa-cai.icp0.io/
+- Backend (vaultpair): https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=milhz-4aaaa-aaaai-q34rq-cai
+- Demo video: https://youtu.be/E31qS6F8xcs
+- One-pager: https://docs.google.com/document/d/1k22yrlNG3m86iExQ9O1iPvdswBHgxpiLkTvVKIgTetQ/edit?usp=sharing
 
 ## Features
 - **Fast UX**: single-update swap path (target ~2s completion) + optimistic UI & concurrent prefetch (~0.5s perceived).
